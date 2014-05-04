@@ -95,6 +95,7 @@ def getallsubs(content, item, subtitles_list):
     languages_map = {'Polski': 'pl', 'Angielski': 'en', 'Niemiecki': 'de'}
 
     soup = BeautifulSoup(content)
+    soup = soup.find("div", {"id": "defaultTable"})
     subs = soup("tr")
     first_row = True
     for row in subs[1:]:
@@ -117,7 +118,8 @@ def getallsubs(content, item, subtitles_list):
             first_row = False
         else:
             file_size, SubHash = hashFile(item["file_original_path"])
-            if disc_amount[0] > '1':
+
+            if len(disc_amount) and disc_amount[0] > '1':
                 video_file_size = re.findall(video_file_size_re_multi, row_str)
             else:
                 video_file_size = re.findall(video_file_size_re, row_str)
@@ -136,7 +138,7 @@ def getallsubs(content, item, subtitles_list):
             rating = re.findall(rating_re, row_str)
             language = re.findall(lang_re, row_str)
 
-            if language[0] in languages_map:
+            if len(language) and language[0] in languages_map:
                 language = [languages_map[language[0]]]
             else:
                 language = []
