@@ -7,7 +7,7 @@ import urllib
 import unicodedata
 import re
 import urllib2
-from BeautifulSoup import BeautifulSoup
+import bs4
 import struct
 import shutil
 
@@ -94,7 +94,7 @@ def hashFile(file_path):
 def getallsubs(content, item, subtitles_list):
     languages_map = {'Polski': 'pl', 'Angielski': 'en', 'Niemiecki': 'de'}
 
-    soup = BeautifulSoup(content)
+    soup = bs4.BeautifulSoup(content)
     soup = soup.find("div", {"id": "defaultTable"})
     subs = soup("tr")
     first_row = True
