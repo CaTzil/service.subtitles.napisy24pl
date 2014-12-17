@@ -9,6 +9,8 @@ import re
 import urllib2
 import struct
 import shutil
+import StringIO
+import gzip
 from BeautifulSoup import BeautifulSoup
 
 try:
@@ -35,7 +37,7 @@ sys.path.append(__resource__)
 
 def normalizeString(str):
     return unicodedata.normalize(
-        'NFKD', unicode(unicode(str, 'utf-8'))
+        'NFKD', unicode(unicode(str, 'latin-1'))
     ).encode('ascii', 'ignore').decode('latin-1').encode("utf-8")
 
 def log(module, msg):
@@ -50,13 +52,31 @@ elif __addon__.getSetting("subs_format") == "2":
 elif __addon__.getSetting("subs_format") == "3":
     subtitle_type = "mpl2"
 
-search_url = "http://napisy24.pl/szukaj?search=%s&page=%d&typ=%d"
+search_url = "http://napisy24.pl/szukaj?search=%s&page=%d&typ=%d&lang=0"
 download_url = "http://napisy24.pl/download?napisId=%s&typ=%s"
 login_url = "http://napisy24.pl/component/comprofiler/login"
 
-def getallsubs(content, item, subtitles_list):
+http_headers = {
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+    'Accept-Charset': 'UTF-8,*;q=0.5',
+    'Accept-Encoding': 'gzip,deflate,sdch',
+    'Accept-Language': 'pl,pl-PL;q=0.8,en-US;q=0.6,en;q=0.4',
+    'Connection': 'keep-alive',
+    'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.1 (KHTML, like Gecko) Chrome/21.0.1180.83 Safari/537.1',
+    'Referer': 'http://napisy24.pl/'
+}
 
-    content = normalizeString(content)
+def http_response_content(response):
+    if response.info().get('Content-Encoding') == 'gzip':
+        buf = StringIO.StringIO(response.read())
+        f = gzip.GzipFile(fileobj=buf)
+        content = f.read()
+    else:
+        content = response.read()
+
+    return content
+
+def getallsubs(content, item, subtitles_list):
 
     soup = BeautifulSoup(content)
     subs = soup.findAll('div', {'class': 'tbl'})
@@ -163,8 +183,10 @@ def Search(item):  #standard input
     url =  search_url % (search_string, 1, search_type)
 
     log(__name__, "Fetching from [ %s ]" % (url))
-    response = urllib2.urlopen(url)
-    content = response.read()
+
+    request = urllib2.Request(url, None, http_headers)
+    response = urllib2.urlopen(request)
+    content = normalizeString(http_response_content(response))
 
     re_pages_string = 'href=".+page=(\d).+">.+</a><a class="page-next'
     pages = re.findall(re_pages_string, content)
@@ -177,8 +199,9 @@ def Search(item):  #standard input
     getallsubs(content, item, subtitles_list)
     for page in range(1, pages):
         url =  search_url % (search_string, (page+1), search_type)
-        response = urllib2.urlopen(url)
-        content = response.read()
+        request = urllib2.Request(url, None, http_headers)
+        response = urllib2.urlopen(request)
+        content = normalizeString(http_response_content(response))
         getallsubs(content, item, subtitles_list)
         
     if subtitles_list:
@@ -214,33 +237,24 @@ def Download(sub_id):  #standard input
     xbmcvfs.mkdirs(__temp__)
 
     cj = CookieJar()
-    headers = {
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Accept-Charset': 'UTF-8,*;q=0.5',
-        'Accept-Encoding': 'gzip,deflate,sdch',
-        'Accept-Language': 'pl,pl-PL;q=0.8,en-US;q=0.6,en;q=0.4',
-        'Connection': 'keep-alive',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.1 (KHTML, like Gecko) Chrome/21.0.1180.83 Safari/537.1',
-        'Referer': 'http://napisy24.pl/'
-    }
 
-    response = urllib2.urlopen(login_url)
-    content = normalizeString(response.read())
+    request = urllib2.Request(login_url, None, http_headers)
+    response = urllib2.urlopen(request)
+    content = normalizeString(http_response_content(response))
     cbsecuritym3 = re.findall('name="cbsecuritym3" value="(.+?)"', content)[0]
 
     values = {
         'username': __addon__.getSetting("username"),
         'passwd': __addon__.getSetting("password"),
-        'cbsecuritym3': cbsecuritym3
+        'cbsecuritym3': cbsecuritym3,
     }
 
     data = urllib.urlencode(values)
     opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
-    request = urllib2.Request(login_url, data, headers)
-
+    request = urllib2.Request(login_url, data, http_headers)
     response = opener.open(request)
 
-    request = urllib2.Request(link, "", headers)
+    request = urllib2.Request(link, "", http_headers)
     f = opener.open(request)
     local_tmp_file = os.path.join(__temp__, "zipsubs.zip")
     log(__name__, "Saving subtitles to '%s'" % (local_tmp_file))
