@@ -1,4 +1,4 @@
-1.0.8 - by DaM 15/12/2014
+1.0.8 - by DaM 06/01/2014
 - Fix for changes in HTML
 
 1.0.7 - by DaM 15/12/2014
