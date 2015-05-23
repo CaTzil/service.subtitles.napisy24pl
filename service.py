@@ -242,7 +242,11 @@ def Download(sub_id):  #standard input
     ## Cleanup temp dir, we recomend you download/unzip your subs in temp folder and
     ## pass that to XBMC to copy and activate
     if xbmcvfs.exists(__temp__):
-        shutil.rmtree(__temp__.encode(sys.getfilesystemencoding()))
+        tmp = __temp__.encode(sys.getfilesystemencoding())
+        if tmp is None:
+            tmp = __temp__
+
+        shutil.rmtree(tmp)
     xbmcvfs.mkdirs(__temp__)
 
     cj = CookieJar()
