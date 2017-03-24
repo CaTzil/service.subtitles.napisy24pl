@@ -19,7 +19,7 @@ msgid "Error searching for subtitles"
 msgstr "Błąd podczas szukania napisów"
 
 msgctxt "#32002"
-msgid "Username"
+msgid "Email"
 msgstr "Nazwa użytkownika"
 
 msgctxt "#32003"
@@ -47,17 +47,21 @@ msgid "Format settings"
 msgstr "Ustawienia formatu"
 
 msgctxt "#32009"
+msgid "SubRip (UTF-8)"
+msgstr "SubRip (UTF-8)"
+
+msgctxt "#32010"
 msgid "SubRip"
 msgstr "SubRip"
 
-msgctxt "#32010"
+msgctxt "#32011"
 msgid "TMPlayer"
 msgstr "TMPlayer"
 
-msgctxt "#32011"
+msgctxt "#32012"
 msgid "MicroDVD"
 msgstr "MicroDVD"
 
-msgctxt "#32012"
-msgid "MP12"
-msgstr "MP12"
+msgctxt "#32013"
+msgid "MPL2"
+msgstr "MPL2"
