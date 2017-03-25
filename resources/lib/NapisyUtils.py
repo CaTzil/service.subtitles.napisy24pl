@@ -26,6 +26,8 @@ __language__ = __addon__.getLocalizedString
 __profile__ = unicode(xbmc.translatePath(__addon__.getAddonInfo('profile')), 'utf-8')
 __temp__ = unicode(xbmc.translatePath(os.path.join(__profile__, 'temp', '')), 'utf-8')
 
+regexHelper = re.compile('\W+', re.UNICODE)
+
 
 def normalizeString(str):
     return unicodedata.normalize(
@@ -34,7 +36,7 @@ def normalizeString(str):
 
 
 def log(msg):
-    xbmc.log((u"### [%s] - %s" % (__scriptname__, msg,)).encode('utf-8'), level=xbmc.LOGDEBUG)
+    xbmc.log((u"### [%s] - %s" % (__scriptname__, msg)).encode('utf-8'), level=xbmc.LOGDEBUG)
 
 
 def notify(msg_id):
@@ -50,11 +52,12 @@ class NapisyHelper:
     def get_subtitle_list(self, item):
         if item["tvshow"]:
             search_results = self._search_tvshow(item)
-            results = self._build_tvshow_subtitle_list(search_results, item)
-            log("Results: %s" % results)
         else:
             search_results = self._search_movie(item)
-            # results = self._build_movie_subtitle_list(search_results, item)
+
+        log("Search results: %s" % search_results)
+        results = self._build_subtitle_list(search_results, item)
+        log("Results: %s" % results)
 
         return results
 
@@ -113,42 +116,86 @@ class NapisyHelper:
 
         search_result = json.loads(search_result, encoding="utf-8")
 
-        return search_result
-
-    def _build_tvshow_subtitle_list(self, search_results, item):
         results = []
-        total_downloads = 0
-        language = "pl"
-        lang3 = xbmc.convertLanguage(language, xbmc.ISO_639_2)
 
-        if lang3 in item["3let_language"]:
-            for result in search_results:
-                html = bs4.BeautifulSoup(result["table"], "html.parser")
-                versions = [tag["data-wydanie"] for tag in html.find_all("h6", attrs={"data-wydanie": True})][0].split(
-                    "; ")
-                total_downloads += int(result["pobran"])
+        for result in search_result:
+            html = bs4.BeautifulSoup(result["table"], "html.parser")
+            versions = [tag["data-wydanie"] for tag in html.find_all("h6", attrs={"data-wydanie": True})][0].split("; ")
 
-                for version in versions:
-                    title = "%s.%s" % (result["serial"].title().replace(" ", "."), version)
-                    language = "pl"
-                    video_file_size = re.findall("([\d.]+) MB", result["table"])[0]
+            for version in versions:
+                results.append({
+                    "id": result["napisid"],
+                    "title": result["serial"].title(),
+                    "release": "%s.%s" % (regexHelper.sub(".", result["serial"].title()), version),
+                    "language": "pl",
+                    "video_file_size": re.findall("[\d.]+ MB", result["table"])[0],
+                    "downloads": int(result["pobran"])
+                })
 
+        return results
+
+    def _search_movie(self, item):
+        query = {
+            "page": 1,
+            "lang": 0,
+            "search": item["title"],
+            "typ": 1
+        }
+        content = self.urlHandler.request(self.BASE_URL + "/szukaj", query)
+        movie_list = bs4.BeautifulSoup(content, "html.parser")
+        movie_list = movie_list.select("[data-napis-id]")
+
+        results = []
+
+        for row in movie_list:
+            napis_id = row["data-napis-id"]
+            title = row.find("div", {"class": "uu_oo_uu"}).get_text().title()
+            column2 = row.find("div", {"class": "infoColumn2"})
+            column2 = "".join([str(x) for x in column2.contents])
+            column2 = [x.strip() for x in filter(None, column2.split("<br>"))]
+            year = column2[0]
+            video_file_size = column2[4]
+            releases = row.find("div", attrs={"data-releases": True})["data-releases"]
+
+            for release in releases.split("<br> "):
+                release = "%s.%s" % (regexHelper.sub(".", title), release)
+                if year == item["year"]:
                     results.append({
-                        'lang_index': item["3let_language"].index(lang3),
-                        'filename': title,
-                        'language_name': xbmc.convertLanguage(language, xbmc.ENGLISH_NAME),
-                        'language_flag': language,
-                        'id': result["napisid"],
-                        'rating': int(result["pobran"]),
-                        'sync': self._is_synced(item, video_file_size, title),
-                        'hearing_imp': False,
-                        'is_preferred': lang3 == item['preferredlanguage']
+                        "id": napis_id,
+                        "title": title,
+                        "release": release,
+                        "video_file_size": video_file_size,
+                        "language": "pl",
+                        "downloads": 0
                     })
 
-            # Fix the rating
-            if total_downloads:
-                for it in results:
-                    it["rating"] = str(min(int(round(it["rating"] / float(total_downloads), 1) * 8), 5))
+        return results
+
+    def _build_subtitle_list(self, search_results, item):
+        results = []
+        total_downloads = 0
+
+        for result in search_results:
+            lang3 = xbmc.convertLanguage(result["language"], xbmc.ISO_639_2)
+
+            if lang3 in item["3let_language"]:
+                total_downloads += result["downloads"]
+                results.append({
+                    'lang_index': item["3let_language"].index(lang3),
+                    'filename': result["release"],
+                    'language_name': xbmc.convertLanguage(result["language"], xbmc.ENGLISH_NAME),
+                    'language_flag': result["language"],
+                    'id': result["id"],
+                    'rating': result["downloads"],
+                    'sync': self._is_synced(item, result["video_file_size"], result["release"]),
+                    'hearing_imp': False,
+                    'is_preferred': lang3 == item['preferredlanguage']
+                })
+
+        # Fix the rating
+        if total_downloads:
+            for it in results:
+                it["rating"] = min(int(round(it["rating"] / float(total_downloads), 1) * 8), 5)
 
         return sorted(results, key=lambda x: (x['is_preferred'], x['lang_index'], x['sync'], x['rating']), reverse=True)
 
@@ -156,7 +203,7 @@ class NapisyHelper:
         sync = False
 
         if len(video_file_size) > 0:
-            video_file_size = float(video_file_size)
+            video_file_size = float(re.findall("([\d.]+) MB", video_file_size)[0])
             file_size = round(item["file_original_size"] / float(1048576), 2)
             if file_size == video_file_size:
                 sync = True
@@ -166,40 +213,30 @@ class NapisyHelper:
 
         return sync
 
-    def _calc_rating(self, vesrion, file_original_path):
+    def _calc_rating(self, version, file_original_path):
         file_name = os.path.basename(file_original_path)
         folder_name = os.path.split(os.path.dirname(file_original_path))[-1]
 
-        vesrion = re.sub(r'\W+', '.', vesrion).lower()
+        version = re.sub(r'\W+', '.', version).lower()
         file_name = re.sub(r'\W+', '.', file_name).lower()
         folder_name = re.sub(r'\W+', '.', folder_name).lower()
         log("# Comparing Releases:\n [subtitle-rls] %s \n [filename-rls] %s \n [folder-rls] %s" % (
-            vesrion, file_name, folder_name))
+            version, file_name, folder_name))
 
-        vesrion = vesrion.split('.')
+        version = version.split('.')
         file_name = file_name.split('.')[:-1]
         folder_name = folder_name.split('.')
 
         if len(file_name) > len(folder_name):
-            diff_file = list(set(file_name) - set(vesrion))
+            diff_file = list(set(file_name) - set(version))
             rating = (1 - (len(diff_file) / float(len(file_name)))) * 5
         else:
-            diff_folder = list(set(folder_name) - set(vesrion))
+            diff_folder = list(set(folder_name) - set(version))
             rating = (1 - (len(diff_folder) / float(len(folder_name)))) * 5
 
         log("\n rating: %f (by %s)" % (round(rating, 1), "file" if len(file_name) > len(folder_name) else "folder"))
 
         return round(rating, 1)
-
-    def _search_movie(self, item):
-        query = {
-            "page": 1,
-            "lang": 0,
-            "search": item["title"],
-            "typ": 1
-        }
-        search_results = self.urlHandler.request(self.BASE_URL + "/szukaj", query)
-        pass
 
 
 class URLHandler:
