@@ -1,3 +1,8 @@
+2.0.0 - by CaTz (25/03/2017)
+- Complete rewrite
+- Make TV-Show search much faster
+- Auto-login if needed
+
 1.0.11 - by CaTz(29/05/2015)
 - Fix for Android os
 

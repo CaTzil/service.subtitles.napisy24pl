@@ -1,0 +1,2 @@
+#LWP-Cookies-2.0
+Set-Cookie3: a60db6679fea622cc9f558bfb421fd29=v4p9peqf719nt2p61kr7oc2i11; path="/"; domain="napisy24.pl"; path_spec; expires="2017-03-31 15:48:07Z"; HttpOnly=None; version=0
