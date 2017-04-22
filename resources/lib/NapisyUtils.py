@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
-import HTMLParser
 import cookielib
+import json
 import os
 import re
+import shutil
+import unicodedata
 import urllib
 import urllib2
-import unicodedata
 import zlib
-import json
-import shutil
+
 import bs4
 
 try:
@@ -41,6 +41,61 @@ def log(msg):
 
 def notify(msg_id):
     xbmc.executebuiltin((u'Notification(%s,%s)' % (__scriptname__, __language__(msg_id))).encode('utf-8'))
+
+
+def clean_title(item):
+    title = os.path.splitext(os.path.basename(item["title"]))
+    tvshow = os.path.splitext(os.path.basename(item["tvshow"]))
+
+    if len(title) > 1:
+        if re.match(r'^\.[a-z]{2,4}$', title[1], re.IGNORECASE):
+            item["title"] = title[0]
+        else:
+            item["title"] = ''.join(title)
+    else:
+        item["title"] = title[0]
+
+    if len(tvshow) > 1:
+        if re.match(r'^\.[a-z]{2,4}$', tvshow[1], re.IGNORECASE):
+            item["tvshow"] = tvshow[0]
+        else:
+            item["tvshow"] = ''.join(tvshow)
+    else:
+        item["tvshow"] = tvshow[0]
+
+    item["title"] = unicode(item["title"], "utf-8")
+    item["tvshow"] = unicode(item["tvshow"], "utf-8")
+    # Removes country identifier at the end
+    item["title"] = re.sub(r'\([^\)]+\)\W*$', '', item["title"]).strip()
+    item["tvshow"] = re.sub(r'\([^\)]+\)\W*$', '', item["tvshow"]).strip()
+
+
+def parse_rls_title(item):
+    title = regexHelper.sub(' ', item["title"])
+    tvshow = regexHelper.sub(' ', item["tvshow"])
+
+    groups = re.findall(r"(.*?) (\d{4})? ?(?:s|season|)(\d{1,2})(?:e|episode|x|\n)(\d{1,2})", title, re.I)
+
+    if len(groups) == 0:
+        groups = re.findall(r"(.*?) (\d{4})? ?(?:s|season|)(\d{1,2})(?:e|episode|x|\n)(\d{1,2})", tvshow, re.I)
+
+    if len(groups) > 0 and len(groups[0]) >= 3:
+        title, year, season, episode = groups[0]
+        item["year"] = str(int(year)) if len(year) == 4 else year
+
+        item["tvshow"] = regexHelper.sub(' ', title).strip()
+        item["season"] = str(int(season))
+        item["episode"] = str(int(episode))
+        log("TV Parsed Item: %s" % (item,))
+
+    else:
+        groups = re.findall(r"(.*?)(\d{4})", item["title"], re.I)
+        if len(groups) > 0 and len(groups[0]) >= 1:
+            title = groups[0][0]
+            item["title"] = regexHelper.sub(' ', title).strip()
+            item["year"] = groups[0][1] if len(groups[0]) == 2 else item["year"]
+
+            log("MOVIE Parsed Item: %s" % (item,))
 
 
 class NapisyHelper:
@@ -93,7 +148,7 @@ class NapisyHelper:
         content = self.urlHandler.request(self.BASE_URL + "/cb-login", data=post_data)
 
         if content.find('http://napisy24.pl/cb-logout') > -1:
-            self.urlHandler.save_cookie();
+            self.urlHandler.save_cookie()
 
             if notify_success:
                 notify(32014)

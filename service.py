@@ -25,7 +25,7 @@ __temp__ = xbmc.translatePath(os.path.join(__profile__, 'temp', '')).decode("utf
 
 sys.path.append(__resource__)
 
-from NapisyUtils import NapisyHelper, log, normalizeString
+from NapisyUtils import NapisyHelper, log, normalizeString, clean_title, parse_rls_title
 
 
 def search(item):
@@ -112,10 +112,26 @@ if params['action'] in ['search', 'manualsearch']:
         item['3let_language'].append(xbmc.convertLanguage(lang, xbmc.ISO_639_2))
 
     if item['title'] == "":
+        log("VideoPlayer.OriginalTitle not found")
         item['title'] = normalizeString(xbmc.getInfoLabel("VideoPlayer.Title"))  # no original title, get just Title
 
+    if params['action'] == 'manualsearch':
+        if item['season'] != '' or item['episode']:
+            item['tvshow'] = urllib.unquote(params['searchstring'])
+        else:
+            item['title'] = urllib.unquote(params['searchstring'])
+
+    for lang in unicode(urllib.unquote(params['languages']), 'utf-8').split(","):
+        item['3let_language'].append(xbmc.convertLanguage(lang, xbmc.ISO_639_2))
+
+    log("Item before cleaning: \n    %s" % item)
+
+    # clean title + tvshow params
+    clean_title(item)
+    parse_rls_title(item)
+
     if item['episode'].lower().find("s") > -1:  # Check if season is "Special"
-        item['season'] = "0"  #
+        item['season'] = "0"
         item['episode'] = item['episode'][-1:]
 
     if (item['file_original_path'].find("http") > -1):
@@ -128,11 +144,6 @@ if params['action'] in ['search', 'manualsearch']:
     elif (item['file_original_path'].find("stack://") > -1):
         stackPath = item['file_original_path'].split(" , ")
         item['file_original_path'] = stackPath[0][8:]
-
-    if item['tvshow'] and params['action'] == "manualsearch":
-        item['tvshow'] = params['searchstring']
-    elif params['action'] == "manualsearch":
-        item['title'] = params['searchstring']
 
     item["file_original_size"] = xbmcvfs.File(item["file_original_path"]).size()
 
