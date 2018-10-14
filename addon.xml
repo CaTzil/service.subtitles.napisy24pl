@@ -11,9 +11,6 @@
         <description lang="pl">Szukaj i pobieraj napisy z serwisu napisy24.pl.</description>
         <source>https://github.com/CaTzil/service.subtitles.napisy24pl</source>
         <language>pl</language>
-        <email> </email>
-        <forum> </forum>
-        <website> </website>
         <forum>http://forum.kodi.tv/showthread.php?tid=193829</forum>
         <license>GNU GENERAL PUBLIC LICENSE. Version 2, June 1991</license>
     </extension>
