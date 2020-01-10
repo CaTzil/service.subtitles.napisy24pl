@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
-import cookielib
+from http.cookiejar import LWPCookieJar
+from urllib.request import HTTPCookieProcessor, build_opener
+from urllib.parse import urlencode
 import json
 import os
 import re
 import shutil
 import unicodedata
-import urllib
-import urllib2
 import zlib
 import bs4
 
@@ -18,24 +18,22 @@ __addon__ = xbmcaddon.Addon()
 __version__ = __addon__.getAddonInfo('version')  # Module version
 __scriptname__ = __addon__.getAddonInfo('name')
 __language__ = __addon__.getLocalizedString
-__profile__ = unicode(xbmc.translatePath(__addon__.getAddonInfo('profile')), 'utf-8')
-__temp__ = unicode(xbmc.translatePath(os.path.join(__profile__, 'temp', '')), 'utf-8')
+__profile__ = xbmc.translatePath(__addon__.getAddonInfo('profile'))
+__temp__ = xbmc.translatePath(os.path.join(__profile__, 'temp', ''))
 
 regexHelper = re.compile('\W+', re.UNICODE)
 
 
 def normalizeString(str):
-    return unicodedata.normalize(
-        'NFKD', unicode(unicode(str, 'utf-8'))
-    ).encode('utf-8', 'ignore')
+    return unicodedata.normalize('NFKD', str)
 
 
 def log(msg):
-    xbmc.log((u"### [%s] - %s" % (__scriptname__, msg)).encode('utf-8'), level=xbmc.LOGDEBUG)
+    xbmc.log((u"### [%s] - %s" % (__scriptname__, msg)), level=xbmc.LOGDEBUG)
 
 
 def notify(msg_id):
-    xbmc.executebuiltin((u'Notification(%s,%s)' % (__scriptname__, __language__(msg_id))).encode('utf-8'))
+    xbmc.executebuiltin((u'Notification(%s,%s)' % (__scriptname__, __language__(msg_id))))
 
 
 def clean_title(item):
@@ -58,8 +56,6 @@ def clean_title(item):
     else:
         item["tvshow"] = tvshow[0]
 
-    item["title"] = unicode(item["title"], "utf-8")
-    item["tvshow"] = unicode(item["tvshow"], "utf-8")
     # Removes country identifier at the end
     item["title"] = re.sub(r'\([^\)]+\)\W*$', '', item["title"]).strip()
     item["tvshow"] = re.sub(r'\([^\)]+\)\W*$', '', item["tvshow"]).strip()
@@ -129,12 +125,15 @@ class NapisyHelper:
         if f is None and self.login(True):
             f = self.urlHandler.request(self.BASE_URL + "/download", query, referer=self.BASE_URL)
 
+        if f is None:
+            return
+
         with open(zip_filename, "wb") as subFile:
             subFile.write(f)
         subFile.close()
-        xbmc.Monitor().waitForAbort(0.5)
+        xbmc.Monitor().waitForAbort(1)
 
-        xbmc.executebuiltin(('XBMC.Extract("%s","%s")' % (zip_filename, __temp__,)).encode('utf-8'), True)
+        xbmc.executebuiltin(('XBMC.Extract("%s","%s")' % (zip_filename, __temp__,)), True)
 
     def login(self, notify_success=False):
         username = __addon__.getSetting("username")
@@ -170,13 +169,13 @@ class NapisyHelper:
 
         for result in search_result:
             html = bs4.BeautifulSoup(result["table"], "html.parser")
-            versions = [tag["data-wydanie"] for tag in html.find_all("h6", attrs={"data-wydanie": True})][0].split("; ")
+            versions = [tag["data-wydanie"] for tag in html.find_all("h6", attrs={"data-wydanie": True})][0].split(";")
 
             for version in versions:
                 results.append({
                     "id": result["napisid"],
                     "title": result["serial"].title(),
-                    "release": "%s.%s" % (regexHelper.sub(".", result["serial"].title()), version),
+                    "release": "%s.%s" % (regexHelper.sub(".", result["serial"].title()), version.strip()),
                     "language": "pl",
                     "video_file_size": re.findall("[\d.]+ MB", result["table"])[0],
                     "downloads": int(result["pobran"])
@@ -202,13 +201,13 @@ class NapisyHelper:
             title = row.find("div", {"class": "uu_oo_uu"}).get_text().title()
             column2 = row.find("div", {"class": "infoColumn2"})
             column2 = "".join([str(x) for x in column2.contents])
-            column2 = [x.strip() for x in filter(None, column2.split("<br>"))]
+            column2 = [x.strip() for x in filter(None, column2.split("<br/>"))]
             year = column2[0]
             video_file_size = column2[4]
             releases = row.find("div", attrs={"data-releases": True})["data-releases"]
 
-            for release in releases.split("<br> "):
-                release = "%s.%s" % (regexHelper.sub(".", title), release)
+            for release in releases.split("<br>"):
+                release = "%s.%s" % (regexHelper.sub(".", title), release.strip())
                 if year == item["year"]:
                     results.append({
                         "id": napis_id,
@@ -292,23 +291,23 @@ class NapisyHelper:
 class URLHandler:
     def __init__(self):
         self.cookie_filename = os.path.join(__profile__, "cookiejar.txt")
-        self.cookie_jar = cookielib.LWPCookieJar(self.cookie_filename)
+        self.cookie_jar = LWPCookieJar(self.cookie_filename)
         if os.access(self.cookie_filename, os.F_OK):
             self.cookie_jar.load()
 
-        self.opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(self.cookie_jar))
+        self.opener = build_opener(HTTPCookieProcessor(self.cookie_jar))
         self.opener.addheaders = [('Accept-Encoding', 'gzip'),
                                   ('Accept-Language', 'en-us,en;q=0.5'),
                                   ('Pragma', 'no-cache'),
                                   ('Cache-Control', 'no-cache'),
                                   ('User-Agent',
-                                   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36')]
+                                   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/78.0.2924.87 Safari/537.36')]
 
     def request(self, url, query_string=None, data=None, ajax=False, referer=None, cookie=None, decode_zlib=True):
         if data is not None:
-            data = urllib.urlencode(data)
+            data = urlencode(data).encode("utf-8")
         if query_string is not None:
-            query_string = urllib.urlencode(query_string)
+            query_string = urlencode(query_string)
             url += "?" + query_string
         if ajax:
             self.opener.addheaders += [('X-Requested-With', 'XMLHttpRequest')]
@@ -318,7 +317,7 @@ class URLHandler:
             self.opener.addheaders += [('Cookie', cookie)]
 
         content = None
-        log("Getting url: %s" % (url))
+        log("Getting url: %s\nData: %s" % (url, data))
         try:
             response = self.opener.open(url, data)
 
@@ -333,10 +332,12 @@ class URLHandler:
 
                 if response.headers.get('content-type', '') == 'application/json':
                     content = json.loads(content, encoding="utf-8")
+                elif response.headers.get('content-type', '').startswith('text/html'):
+                    content = content.decode('utf-8')
 
             response.close()
         except Exception as e:
-            log("Failed to get url: %s\n%s" % (url, e.message))
+            log("Failed to get url: %s\n%s" % (url, e))
             # Second parameter is the filename
         return content
 
