@@ -13,6 +13,7 @@ import bs4
 import xbmc
 import xbmcvfs
 import xbmcaddon
+import xbmcgui
 
 __addon__ = xbmcaddon.Addon()
 __version__ = __addon__.getAddonInfo('version')  # Module version
@@ -33,7 +34,7 @@ def log(msg):
 
 
 def notify(msg_id):
-    xbmc.executebuiltin((u'Notification(%s,%s)' % (__scriptname__, __language__(msg_id))))
+    xbmcgui.Dialog().notification(__scriptname__, __language__(msg_id))
 
 
 def clean_title(item):

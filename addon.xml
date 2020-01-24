@@ -6,14 +6,13 @@
     </requires>
     <extension point="xbmc.subtitle.module" library="service.py"/>
     <extension point="xbmc.addon.metadata">
-        <summary lang="en">Napisy24.pl</summary>
-        <description lang="en">Search and Download subtitles from napisy24.pl.</description>
-        <summary lang="pl">Napisy24.pl</summary>
-        <description lang="pl">Szukaj i pobieraj napisy z serwisu napisy24.pl.</description>
+        <summary lang="en_GB">Napisy24.pl</summary>
+        <description lang="en_GB">Search and Download subtitles from napisy24.pl.</description>
+        <summary lang="pl_PL">Napisy24.pl</summary>
+        <description lang="pl_PL">Szukaj i pobieraj napisy z serwisu napisy24.pl.</description>
         <source>https://github.com/CaTzil/service.subtitles.napisy24pl</source>
-        <language>pl</language>
         <forum>https://forum.kodi.tv/showthread.php?tid=193829</forum>
-        <license>GNU GENERAL PUBLIC LICENSE. Version 2, June 1991</license>
+        <license>GNU General Public License v2.0 only</license>
         <assets>
             <icon>icon.png</icon>
             <clearlogo>logo.png</clearlogo>
