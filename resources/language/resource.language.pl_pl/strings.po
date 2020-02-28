@@ -67,3 +67,7 @@ msgstr "MPL2"
 msgctxt "#32014"
 msgid "You are logged in successfully"
 msgstr "Jesteś zalogowany pomyślnie"
+
+msgctxt "#32015"
+msgid "Check login credentials"
+msgstr "Sprawdź dane logowania"

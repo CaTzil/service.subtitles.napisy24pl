@@ -158,4 +158,9 @@ elif params['action'] == 'download':
         listitem = xbmcgui.ListItem(label=sub)
         xbmcplugin.addDirectoryItem(handle=int(sys.argv[1]), url=sub, listitem=listitem, isFolder=False)
 
+elif params['action'] == 'login':
+    helper = NapisyHelper()
+    helper.login(True)
+    __addon__.openSettings()
+
 xbmcplugin.endOfDirectory(int(sys.argv[1]))  ## send end of directory to XBMC
