@@ -12,7 +12,7 @@
         <description lang="pl_PL">Szukaj i pobieraj napisy z serwisu napisy24.pl.</description>
         <source>https://github.com/CaTzil/service.subtitles.napisy24pl</source>
         <forum>https://forum.kodi.tv/showthread.php?tid=193829</forum>
-        <license>GNU General Public License v2.0 only</license>
+        <license>GPL-2.0-only</license>
         <assets>
             <icon>icon.png</icon>
             <clearlogo>logo.png</clearlogo>

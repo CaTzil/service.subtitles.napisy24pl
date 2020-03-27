@@ -23,9 +23,8 @@ __profile__ = xbmc.translatePath(__addon__.getAddonInfo('profile'))
 __resource__ = xbmc.translatePath(os.path.join(__cwd__, 'resources', 'lib'))
 __temp__ = xbmc.translatePath(os.path.join(__profile__, 'temp', ''))
 
-sys.path.append(__resource__)
 
-from NapisyUtils import NapisyHelper, log, normalizeString, clean_title, parse_rls_title
+from resources.lib.NapisyUtils import NapisyHelper, log, normalizeString, clean_title, parse_rls_title
 
 
 def search(item):
