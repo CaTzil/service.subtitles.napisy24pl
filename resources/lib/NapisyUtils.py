@@ -5,7 +5,6 @@ from urllib.parse import urlencode, quote_plus
 import json
 import os
 import re
-import shutil
 import unicodedata
 import zlib
 import bs4
