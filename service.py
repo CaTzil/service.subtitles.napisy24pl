@@ -73,6 +73,8 @@ def get_params():
 params = get_params()
 
 if params['action'] in ['search', 'manualsearch']:
+    log("Version: '%s'" % (__version__,))
+
     item = {}
     item['temp'] = False
     item['rar'] = False
@@ -99,9 +101,6 @@ if params['action'] in ['search', 'manualsearch']:
             item['tvshow'] = unquote(params['searchstring'])
         else:
             item['title'] = unquote(params['searchstring'])
-
-    for lang in unquote(params['languages']).split(","):
-        item['3let_language'].append(xbmc.convertLanguage(lang, xbmc.ISO_639_2))
 
     log("Item before cleaning: \n    %s" % item)
 
