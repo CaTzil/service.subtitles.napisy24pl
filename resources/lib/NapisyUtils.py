@@ -186,6 +186,14 @@ class NapisyHelper:
             html = bs4.BeautifulSoup(result["table"], "html.parser")
             versions = [tag["data-wydanie"] for tag in html.find_all("h6", attrs={"data-wydanie": True})][0].split(";")
 
+            sub_details = html.find("div", {"class": "infoColumn2tab"})
+            sub_details = "".join([str(x) for x in sub_details.contents])
+            sub_details = [x.strip() for x in filter(None, sub_details.split("<br/>")[:-1])]
+
+            runtime = sub_details[1]
+            resolution = sub_details[2]
+            fps = sub_details[3]
+            
             for version in versions:
                 results.append({
                     "id": result["napisid"],
@@ -193,7 +201,10 @@ class NapisyHelper:
                     "release": "%s.%s" % (regexHelper.sub(".", result["serial"].title()), version.strip()),
                     "language": "pl",
                     "video_file_size": re.findall("[\d.]+ MB", result["table"])[0],
-                    "downloads": int(result["pobran"])
+                    "downloads": int(result["pobran"]),
+                    "runtime" : runtime,
+                    "resolution" : resolution,
+                    "fps" : fps
                 })
 
         return results
@@ -214,11 +225,14 @@ class NapisyHelper:
         for row in movie_list:
             napis_id = row["data-napis-id"]
             title = row.find("div", {"class": "uu_oo_uu"}).get_text().title()
-            column2 = row.find("div", {"class": "infoColumn2"})
-            column2 = "".join([str(x) for x in column2.contents])
-            column2 = [x.strip() for x in filter(None, column2.split("<br/>"))]
-            year = column2[0]
-            video_file_size = column2[4]
+            sub_details = row.find("div", {"class": "infoColumn2"})
+            sub_details = "".join([str(x) for x in sub_details.contents])
+            sub_details = [x.strip() for x in filter(None, sub_details.split("<br/>")[:-1])]
+            year = sub_details[0]
+            runtime = sub_details[1]
+            resolution = sub_details[2]
+            fps = sub_details[3]
+            video_file_size = sub_details[4]
             releases = row.find("div", attrs={"data-releases": True})["data-releases"]
 
             for release in releases.split("<br>"):
@@ -230,7 +244,10 @@ class NapisyHelper:
                         "release": release,
                         "video_file_size": video_file_size,
                         "language": "pl",
-                        "downloads": 0
+                        "downloads": 0,
+                        "runtime" : runtime,
+                        "resolution" : resolution,
+                        "fps" : fps
                     })
 
         return results
@@ -253,7 +270,11 @@ class NapisyHelper:
                     'rating': result["downloads"],
                     'sync': self._is_synced(item, result["video_file_size"], result["release"]),
                     'hearing_imp': False,
-                    'is_preferred': lang3 == item['preferredlanguage']
+                    'is_preferred': lang3 == item['preferredlanguage'],
+                    "runtime" : result["runtime"],
+                    "resolution" : result["resolution"],
+                    "fps" : result["fps"],
+                    "video_file_size" : self._get_parsed_file_size(result["video_file_size"])
                 })
 
         # Fix the rating
@@ -262,6 +283,13 @@ class NapisyHelper:
                 it["rating"] = min(int(round(it["rating"] / float(total_downloads), 1) * 8), 5)
 
         return sorted(results, key=lambda x: (x['is_preferred'], x['lang_index'], x['sync'], x['rating']), reverse=True)
+
+    def _get_parsed_file_size(self, video_file_size):
+        video_file_size = float(re.findall("([\d.]+) MB", video_file_size)[0])
+        if (video_file_size >= 1024.0):
+            return f'{round(video_file_size / 1024.0, 1)} GiB'
+        else:
+            return f'{video_file_size} MiB'
 
     def _is_synced(self, item, video_file_size, version):
         sync = False
