@@ -30,7 +30,8 @@ def search(item):
     if subtitles_list:
         for it in subtitles_list:
             listitem = xbmcgui.ListItem(label=it["language_name"],
-                                        label2=it["filename"])
+                                        label2=f'{it["filename"]} | {it["video_file_size"]} | {it["runtime"]} | {it["fps"]} | {it["resolution"]}')
+            
             listitem.setArt({'icon': str(it["rating"]), 'thumb': it["language_flag"]})
 
             if it["sync"]:
